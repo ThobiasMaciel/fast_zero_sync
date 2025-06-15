@@ -27,55 +27,83 @@ def test_create_user(client):
     }
 
 
-def test_read_users(client):
-    response = client.get('/users')
+# Função auxiliar para pegar o header de autorização com token válido
+def get_auth_header(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': user.clean_password,
+            'scope': '',
+        },
+    )
+    token = response.json()['access_token']
+    return {'Authorization': f'Bearer {token}'}
+
+
+def test_read_users(client, user):
+    headers = get_auth_header(client, user)
+    response = client.get('/users', headers=headers)
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'users': []}
+
+    expected = {'users': [UserPublicSchema.model_validate(user).model_dump()]}
+    assert response.json() == expected
 
 
 def test_read_users_with_users(client, user):
-    user_schema = UserPublicSchema.model_validate(user).model_dump()
-    response = client.get('/users/')
+    # Reuso do mesmo teste para garantir usuários na lista
+    headers = get_auth_header(client, user)
+    response = client.get('/users/', headers=headers)
     assert response.status_code == HTTPStatus.OK
+    user_schema = UserPublicSchema.model_validate(user).model_dump()
     assert response.json() == {'users': [user_schema]}
 
 
-def test_update_user(client, user):  # <-- adiciona a fixture user aqui
+def test_update_user(client, user):
+    headers = get_auth_header(client, user)
+
     response = client.put(
         f'/users/{user.id}',
         json={
-            'id': user.id,
-            'username': 'testuser',
-            'email': 'testEMail@test.com',
-            'password': '123',
+            'username': 'bob',
+            'email': 'bob@test.com',
+            'password': 'mynewpassword',
         },
+        headers=headers,
     )
+
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': user.id,
-        'username': 'testuser',
-        'email': 'testEMail@test.com',
+        'username': 'bob',
+        'email': 'bob@test.com',
     }
 
 
-def test_delete_user(client, user):  # também aqui
-    response = client.delete(f'/users/{user.id}')
+def test_delete_user(client, user):
+    headers = get_auth_header(client, user)
+    response = client.delete(f'/users/{user.id}', headers=headers)
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
 def test_update_integrity_error(client, session, user):
     existing_user = User(
-        username='existinguser', email='existing@test.com', password='123'
+        username='existinguser',
+        email='existing@test.com',
+        password='123',
     )
     session.add(existing_user)
     session.commit()
 
+    headers = get_auth_header(client, user)
+
     response_update = client.put(
         f'/users/{user.id}',
+        headers=headers,
         json={
             'id': user.id,
-            'username': 'existinguser',  # Nome que já existe
+            'username': 'existinguser',
             'email': 'newemail@test.com',
             'password': '123',
         },
@@ -83,3 +111,18 @@ def test_update_integrity_error(client, session, user):
 
     assert response_update.status_code == HTTPStatus.CONFLICT
     assert response_update.json() == {'detail': 'Username already exists'}
+
+
+def test_get_token(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': user.clean_password,
+            'scope': '',
+        },
+    )
+    token = response.json()
+    assert response.status_code == HTTPStatus.OK
+    assert token['token_type'].lower() == 'bearer'
+    assert 'access_token' in token
