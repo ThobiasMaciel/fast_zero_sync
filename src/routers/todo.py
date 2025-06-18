@@ -1,12 +1,14 @@
+from datetime import datetime
 from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.fast_zero.database import get_session
-from src.fast_zero.models import Todo, User
+from src.fast_zero.models import Todo, TodoPriority, TodoState, User
 from src.fast_zero.schemas import (
     Message,
     TodoList,
@@ -22,7 +24,7 @@ Session = Annotated[Session, Depends(get_session)]
 User = Annotated[User, Depends(get_current_user)]
 
 
-@router.post('/', response_model=TodoPublic)
+@router.post('/', response_model=TodoPublic, status_code=HTTPStatus.CREATED)
 def create_todo(
     todo: TodoSchema,
     session: Session,
@@ -32,6 +34,8 @@ def create_todo(
         title=todo.title,
         description=todo.description,
         state=todo.state,
+        priority=todo.priority,
+        due_date=todo.due_date,
         user_id=user.id,
     )
     session.add(db_todo)
@@ -41,33 +45,48 @@ def create_todo(
     return db_todo
 
 
+class TodoFilters(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    state: TodoState | None = None
+    priority: TodoPriority | None = None
+    due_before: datetime | None = None
+    offset: int = 0
+    limit: int = 100
+
+
 @router.get('/', response_model=TodoList)
-def list_todos(  # noqa
+def list_todos(
     session: Session,
     user: User,
-    title: str | None = None,
-    description: str | None = None,
-    state: str | None = None,
-    offset: int | None = None,
-    limit: int | None = None,
+    filters: TodoFilters = Depends(),
 ):
     query = select(Todo).where(Todo.user_id == user.id)
-    if title:  # o título contém
-        query = query.filter(Todo.title.contains(title))
 
-    if description:  # a descrição contém
-        query = query.filter(Todo.description.contains(description))
+    if filters.title:
+        query = query.filter(Todo.title.contains(filters.title))
 
-    if state:  # o estado é igual
-        query = query.filter(Todo.state == state)
+    if filters.description:
+        query = query.filter(Todo.description.contains(filters.description))
 
-    todos = session.scalars(query.offset(offset).limit(limit)).all()
+    if filters.state:
+        query = query.filter(Todo.state == filters.state)
+
+    if filters.priority:
+        query = query.filter(Todo.priority == filters.priority)
+
+    if filters.due_before:
+        query = query.filter(Todo.due_date <= filters.due_before)
+
+    todos = session.scalars(
+        query.offset(filters.offset).limit(filters.limit)
+    ).all()
 
     return {'todos': todos}
 
 
 @router.delete('/{todo_id}', response_model=Message)
-async def delete_todo(todo_id: int, session: Session, user: User):
+def delete_todo(todo_id: int, session: Session, user: User):
     todo = session.scalar(
         select(Todo).where(Todo.user_id == user.id, Todo.id == todo_id)
     )
@@ -78,8 +97,28 @@ async def delete_todo(todo_id: int, session: Session, user: User):
         )
 
     session.delete(todo)
+    session.commit()  # <<< Commit adicionado
 
     return {'message': 'Task has been deleted successfully.'}
+
+
+@router.get('/{todo_id}', response_model=TodoPublic)
+def get_task_by_id(
+    todo_id: int,  # ✅ Corrigido aqui
+    session: Session,
+    user: User,
+):
+    todo = session.scalar(
+        select(Todo).where(Todo.user_id == user.id, Todo.id == todo_id)
+    )
+
+    if not todo:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Task not found',
+        )
+
+    return todo
 
 
 @router.patch('/{todo_id}', response_model=TodoPublic)

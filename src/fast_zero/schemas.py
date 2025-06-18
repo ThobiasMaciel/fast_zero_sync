@@ -1,6 +1,9 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from src.fast_zero.models import TodoState
+from src.fast_zero.models import TodoPriority, TodoState
 
 
 class Message(BaseModel):
@@ -37,10 +40,13 @@ class TodoSchema(BaseModel):
     title: str
     description: str
     state: TodoState
+    priority: TodoPriority
+    due_date: Optional[datetime] = None
 
 
 class TodoPublic(TodoSchema):
     id: int
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TodoList(BaseModel):
@@ -51,3 +57,5 @@ class TodoUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     state: TodoState | None = None
+    priority: TodoPriority | None = None
+    due_date: Optional[datetime] = None

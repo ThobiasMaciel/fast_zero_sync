@@ -12,13 +12,18 @@ def test_create_todo(client, token):
             'title': 'Test todo',
             'description': 'Test todo description',
             'state': 'draft',
+            'priority': 'low',
+            'due_data': None,
         },
     )
+    assert response.status_code == HTTPStatus.CREATED
     assert response.json() == {
         'id': 1,
         'title': 'Test todo',
         'description': 'Test todo description',
         'state': 'draft',
+        'priority': 'low',
+        'due_date': None,
     }
 
 
@@ -114,6 +119,19 @@ def test_delete_todo(session, client, user, token):
     assert response.json() == {
         'message': 'Task has been deleted successfully.'
     }
+
+
+def test_get_todo_by_id(session, client, user, token):
+    todo = TodoFactory(user_id=user.id)
+    session.add(todo)
+    session.commit()
+
+    response = client.get(
+        f'/todos/{todo.id}', headers={'Authorization': f'Bearer {token}'}
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()['id'] == todo.id
 
 
 def test_delete_todo_error(client, token):

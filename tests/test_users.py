@@ -78,7 +78,7 @@ def test_delete_user(client, user):
     headers = get_auth_header(client, user)
     response = client.delete(f'/users/{user.id}', headers=headers)
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'message': 'User deleted'}
+    assert response.json() == {'message': 'User soft deleted'}
 
 
 def test_update_integrity_error(client, session, user):

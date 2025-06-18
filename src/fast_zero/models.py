@@ -1,10 +1,16 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, registry
 
 table_registry = registry()
+
+
+class TodoPriority(str, Enum):
+    low = 'low'
+    medium = 'medium'
+    high = 'high'
 
 
 class TodoState(str, Enum):
@@ -28,6 +34,9 @@ class User:
     )
 
 
+# ...
+
+
 @table_registry.mapped_as_dataclass
 class Todo:
     __tablename__ = 'todos'
@@ -36,4 +45,6 @@ class Todo:
     title: Mapped[str]
     description: Mapped[str]
     state: Mapped[TodoState]
+    priority: Mapped[TodoPriority]
+    due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))

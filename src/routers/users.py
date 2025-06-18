@@ -57,6 +57,23 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
     return db_user
 
 
+@router.get('/{user_id}', response_model=UserPublicSchema)
+def get_user_by_id(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    user = session.get(User, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='User not found',
+        )
+
+    return user
+
+
 @router.get('/', response_model=UserList)
 def read_users(
     skip: int = 0,
@@ -102,12 +119,21 @@ def delete_user(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.id != user_id:
+    user_to_delete = session.get(User, user_id)
+
+    if not user_to_delete:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='User not found',
+        )
+
+    if current_user.id != user_id and not current_user.role == 'admin':
         raise HTTPException(
             status_code=HTTPStatus.FORBIDDEN,
             detail='Not enough permissions',
         )
-    session.delete(current_user)
+
+    user_to_delete.is_active = False
     session.commit()
 
-    return {'message': 'User deleted'}
+    return {'message': 'User soft deleted'}
