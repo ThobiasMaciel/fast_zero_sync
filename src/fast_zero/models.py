@@ -7,15 +7,15 @@ from sqlalchemy.orm import Mapped, mapped_column, registry
 table_registry = registry()
 
 
-class TodoPriority(str, Enum):
+class TaskPriority(str, Enum):
     low = 'low'
     medium = 'medium'
     high = 'high'
 
 
-class TodoState(str, Enum):
+class TaskState(str, Enum):
     draft = 'draft'
-    todo = 'todo'
+    task = 'task'
     doing = 'doing'
     done = 'done'
     trash = 'trash'
@@ -38,13 +38,13 @@ class User:
 
 
 @table_registry.mapped_as_dataclass
-class Todo:
-    __tablename__ = 'todos'
+class Task:
+    __tablename__ = 'task'
 
     id: Mapped[int] = mapped_column(init=False, primary_key=True)
     title: Mapped[str]
     description: Mapped[str]
-    state: Mapped[TodoState]
-    priority: Mapped[TodoPriority]
+    state: Mapped[TaskState]
+    priority: Mapped[TaskPriority]
     due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))

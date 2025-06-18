@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from src.fast_zero.models import TodoPriority, TodoState
+from src.fast_zero.models import TaskPriority, TaskState
 
 
 class Message(BaseModel):
@@ -36,26 +36,26 @@ class UserToken(BaseModel):
     token_type: str
 
 
-class TodoSchema(BaseModel):
+class TaskSchema(BaseModel):
     title: str
     description: str
-    state: TodoState
-    priority: TodoPriority
+    state: TaskState
+    priority: TaskPriority
     due_date: Optional[datetime] = None
 
 
-class TodoPublic(TodoSchema):
+class TaskPublic(TaskSchema):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
 
-class TodoList(BaseModel):
-    todos: list[TodoPublic]
+class TaskList(BaseModel):
+    task: list[TaskPublic]
 
 
-class TodoUpdate(BaseModel):
+class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
-    state: TodoState | None = None
-    priority: TodoPriority | None = None
+    state: TaskState | None = None
+    priority: TaskPriority | None = None
     due_date: Optional[datetime] = None

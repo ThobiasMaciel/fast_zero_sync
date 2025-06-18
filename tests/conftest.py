@@ -9,13 +9,13 @@ from sqlalchemy.pool import StaticPool
 
 from src.fast_zero.app import app
 from src.fast_zero.database import get_session
-from src.fast_zero.models import Todo, User, table_registry
+from src.fast_zero.models import Task, User, table_registry
 from src.fast_zero.security import get_password_hash
 
 
-class TodoFactory(factory.alchemy.SQLAlchemyModelFactory):
+class TaskFactory(factory.alchemy.SQLAlchemyModelFactory):
     class Meta:
-        model = Todo
+        model = Task
         sqlalchemy_session = None
         sqlalchemy_session_persistence = 'flush'
 
@@ -42,7 +42,7 @@ def session():
     db = SessionLocal()
 
     # <-- Adicione isso aqui:
-    TodoFactory._meta.sqlalchemy_session = db
+    TaskFactory._meta.sqlalchemy_session = db
 
     try:
         yield db
