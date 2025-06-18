@@ -13,5 +13,5 @@ docker
 
 `docker compose up`
 
-![Test Status](https://github.com/ThobiasMaciel/fast_zero_sync/actions/workflows/test-status.yml/badge.svg?branch=main)
+![Test Status](https://github.com/ThobiasMaciel/fast_zero_sync/actions/workflows/test-status.yml/badge.svg?branch=master)
 
